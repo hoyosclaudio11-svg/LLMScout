@@ -62,20 +62,21 @@ def _familia(s):
     return {t for t in re.findall(r"[a-z0-9]+", s.lower()) if len(t) >= 3 and t not in _STOP}
 
 
-def match_ids(nombre, ids):
-    """Primer id de la lista que coincida con el nombre (norm exacto/substring
-    o familia compartida), o None. Sirve para gateways y para precios."""
+def match_ids(nombre, ids, familia=True):
+    """El id que coincida con el nombre (norm exacto/substring y, si familia,
+    también por tokens compartidos). Entre varios coincidentes gana el de id
+    más corto: 'gemini-3.5-flash' no hereda el precio de 'gemini-3.5-flash-lite'.
+    familia=False para precios (estricto); True para disponibilidad local."""
     n = _norm(nombre)
     fam = _familia(nombre)
+    hits = []
     for lid in ids:
         l = _norm(lid)
         if not l:
             continue
-        if l == n or l in n or n in l:
-            return lid
-        if _familia(lid) & fam:
-            return lid
-    return None
+        if l == n or l in n or n in l or (familia and (_familia(lid) & fam)):
+            hits.append(lid)
+    return min(hits, key=len) if hits else None
 
 
 # chat web de cada familia, para el botón "Abrir"
@@ -289,7 +290,7 @@ def _aplicar_precios(modelos):
         precios = obj["precios"]
         hits = 0
         for m in modelos:
-            hit = match_ids(m["name"], precios.keys())
+            hit = match_ids(m["name"], precios.keys(), familia=False)
             if not hit:
                 continue
             hits += 1

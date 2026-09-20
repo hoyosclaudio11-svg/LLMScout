@@ -60,12 +60,12 @@
       "tags": ["frontier", "vision", "largo"]
     },
     {
-      "id": "gemini-2.5-flash-lite",
-      "name": "Gemini 2.5 Flash-Lite",
+      "id": "gemini-3.1-flash-lite",
+      "name": "Gemini 3.1 Flash-Lite",
       "provider": "Google",
-      "scores": {"coding": 68, "writing": 72, "reasoning": 66, "long_context": 75, "vision": 70, "speed": 92, "price": 96},
-      "price_note": "Ultrarrápido (~400 tok/s) y baratísimo",
-      "tags": ["economico", "rapido"]
+      "scores": {"coding": 71, "writing": 73, "reasoning": 69, "long_context": 79, "vision": 74, "speed": 91, "price": 70},
+      "price_note": "US$0.56/M · flash liviano de la generación actual",
+      "tags": ["flash", "economico"]
     },
     {
       "id": "glm-5.3",
@@ -146,6 +146,62 @@
       "scores": {"coding": 55, "writing": 60, "reasoning": 55, "long_context": 60, "vision": 40, "speed": 90, "price": 99},
       "price_note": "Lo más barato del mercado (~$0.02/M)",
       "tags": ["economico", "local"]
+    },
+    {
+      "id": "deepseek-v4-flash",
+      "name": "DeepSeek V4 Flash",
+      "provider": "DeepSeek",
+      "scores": {"coding": 78, "writing": 71, "reasoning": 76, "long_context": 79, "vision": 50, "speed": 88, "price": 93},
+      "price_note": "US$0.05/M · el flash más barato de los grandes",
+      "tags": ["open", "flash", "economico"]
+    },
+    {
+      "id": "qwen-3.8-flash",
+      "name": "Qwen 3.8 Flash",
+      "provider": "Alibaba",
+      "scores": {"coding": 76, "writing": 73, "reasoning": 74, "long_context": 79, "vision": 72, "speed": 87, "price": 78},
+      "price_note": "US$0.23/M · flash abierto multimodal",
+      "tags": ["open", "flash", "economico"]
+    },
+    {
+      "id": "qwen3-coder-flash",
+      "name": "Qwen3 Coder Flash",
+      "provider": "Alibaba",
+      "scores": {"coding": 80, "writing": 55, "reasoning": 68, "long_context": 79, "vision": 40, "speed": 85, "price": 73},
+      "price_note": "US$0.39/M · especialista en código, rápido",
+      "tags": ["open", "flash", "codigo", "especialista"]
+    },
+    {
+      "id": "gpt-5-nano",
+      "name": "GPT-5 nano",
+      "provider": "OpenAI",
+      "scores": {"coding": 64, "writing": 62, "reasoning": 64, "long_context": 72, "vision": 55, "speed": 90, "price": 83},
+      "price_note": "US$0.14/M · el más chico de OpenAI",
+      "tags": ["flash", "economico"]
+    },
+    {
+      "id": "gpt-5-mini",
+      "name": "GPT-5 mini",
+      "provider": "OpenAI",
+      "scores": {"coding": 73, "writing": 70, "reasoning": 74, "long_context": 72, "vision": 60, "speed": 84, "price": 68},
+      "price_note": "US$0.69/M · el flash de OpenAI",
+      "tags": ["flash", "economico"]
+    },
+    {
+      "id": "claude-haiku-4.5",
+      "name": "Claude Haiku 4.5",
+      "provider": "Anthropic",
+      "scores": {"coding": 74, "writing": 74, "reasoning": 70, "long_context": 67, "vision": 65, "speed": 86, "price": 59},
+      "price_note": "US$2/M · el flash de la casa Claude",
+      "tags": ["flash"]
+    },
+    {
+      "id": "gemini-3.5-flash",
+      "name": "Gemini 3.5 Flash",
+      "provider": "Google",
+      "scores": {"coding": 80, "writing": 79, "reasoning": 78, "long_context": 79, "vision": 82, "speed": 82, "price": 54},
+      "price_note": "US$3.4/M · flash de última generación, casi Pro",
+      "tags": ["flash", "equilibrado"]
     },
     {
       "id": "jev",
