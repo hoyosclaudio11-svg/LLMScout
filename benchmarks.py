@@ -269,7 +269,8 @@ def refrescar_precios():
                 p_in = p_out = 0.0
             blended = (p_in * 3 + p_out) / 4 * 1e6
             precios[mid] = {"price": _score_precio(blended),
-                            "long_context": _score_contexto(f.get("context_length") or 0)}
+                            "long_context": _score_contexto(f.get("context_length") or 0),
+                            "usd_m": round(blended, 4)}
         DATA.mkdir(parents=True, exist_ok=True)
         CACHE_PRECIOS.write_text(json.dumps({"ts": time.time(), "precios": precios}),
                                  "utf-8")
@@ -296,6 +297,8 @@ def _aplicar_precios(modelos):
             lc = precios[hit]["long_context"]
             if lc is not None:
                 m["scores"]["long_context"] = lc
+            if precios[hit].get("usd_m"):
+                m["usd_m"] = precios[hit]["usd_m"]
         return modelos, hits
     except Exception:
         return modelos, 0
@@ -328,33 +331,94 @@ def cargar(filtro_local_ids=None):
     return modelos, fuente
 
 
-def recomendar(categoria, modelos, k=3):
-    """Top k para una categoría: [(indice, motivo, modelo)] ordenado."""
+# cuánta capacidad (vs. el mejor) exige cada tarea: el "económico" es el más
+# barato que llega a ese piso. Se ajusta en data/config.json -> "exigencia"
+EXIGENCIA_DEFAULT = {"coding": .82, "data": .82, "research": .80,
+                     "writing": .78, "media": .75, "chat": .70, "general": .72}
+
+
+def _exigencia(categoria):
+    e = dict(EXIGENCIA_DEFAULT)
+    try:
+        cfg = json.loads((DATA / "config.json").read_text("utf-8"))
+        e.update(cfg.get("exigencia", {}))
+    except Exception:
+        pass
+    return e.get(categoria, .75)
+
+
+def _indice_capacidad(categoria, m):
+    """Índice de capacidad pura: sin precio ni velocidad (que no compre examen)."""
+    pesos = {d: p for d, p in PESOS.get(categoria, PESOS["general"]).items()
+             if d not in ("price", "speed")}
+    total = sum(pesos.values()) or 1.0
+    return sum(m["scores"].get(d, 50) * p for d, p in pesos.items()) / total
+
+
+def recomendar(categoria, modelos):
+    """Tres respuestas distintas, no tres tamaños de la misma:
+    Mejor (calidad), Equilibrado (bueno y no caro), Económico (el más barato
+    que alcanza la exigencia de la tarea). -> [{rol, modelo, indice, motivo, nota}]"""
     if not modelos:
         return []
     pesos = PESOS.get(categoria, PESOS["general"])
     medias = {d: sum(m["scores"].get(d, 50) for m in modelos) / len(modelos)
               for d in pesos}
-    out = []
-    for m in modelos:
-        sc = m["scores"]
-        indice = sum(sc.get(d, 50) * p for d, p in pesos.items())
+
+    def indice(m):
+        return sum(m["scores"].get(d, 50) * p for d, p in pesos.items())
+
+    def motivo_de(m):
         dim, mejor = None, -1e9
         for d, p in pesos.items():
             if p < .10:
                 continue
-            ventaja = (sc.get(d, 50) - medias[d]) * p
+            ventaja = (m["scores"].get(d, 50) - medias[d]) * p
             if ventaja > mejor:
                 dim, mejor = d, ventaja
-        out.append((round(indice, 1), MOTIVOS.get(dim, "buena opción general"), m))
-    out.sort(key=lambda t: -t[0])
-    return out[:k]
+        return MOTIVOS.get(dim, "buena opción general")
+
+    orden = sorted(modelos, key=indice, reverse=True)
+    mejor = orden[0]
+
+    # económico: el más barato cuya capacidad llega a la exigencia de la tarea.
+    # precio en baldes de 5: si dos son igual de baratos, gana el más capaz
+    umbral = _exigencia(categoria) * _indice_capacidad(categoria, mejor)
+    pasan = [m for m in modelos if _indice_capacidad(categoria, m) >= umbral]
+    pool_eco = [m for m in pasan if m is not mejor] or pasan
+    economico = max(pool_eco,
+                    key=lambda m: (m["scores"].get("price", 50) // 5,
+                                   _indice_capacidad(categoria, m)))
+
+    # equilibrado: el mejor índice entre los que no son caros y no están ya
+    equilibrado = next((m for m in orden if m is not mejor and m is not economico
+                        and m["scores"].get("price", 50) >= 55), None)
+
+    def ahorro(m):
+        a, b = mejor.get("usd_m"), m.get("usd_m")
+        if a and b and a > 0 and b > 0 and a / b >= 2:
+            return f"~{round(a / b)}x más barato que el mejor"
+        return "bastante más barato"
+
+    out = []
+    for rol, m in (("Mejor", mejor), ("Equilibrado", equilibrado),
+                   ("Económico", economico)):
+        if m is None:
+            continue
+        nota = m.get("price_note", "")
+        if m is not mejor:
+            extra = ahorro(m)
+            nota = f"{nota} · {extra}" if nota else extra
+        out.append({"rol": rol, "modelo": m, "indice": round(indice(m), 1),
+                    "motivo": motivo_de(m), "nota": nota})
+    return out
 
 
 if __name__ == "__main__":
     ms, f = cargar()
     print(f"fuente: {f} · {len(ms)} modelos")
-    for cat in ("coding", "writing", "data"):
+    for cat in ("coding", "writing", "chat"):
         print(f"\n— {cat} —")
-        for ind, mot, m in recomendar(cat, ms):
-            print(f"  {m['name']:24} índice {ind:5.1f} · {mot}")
+        for r in recomendar(cat, ms):
+            print(f"  [{r['rol']:11}] {r['modelo']['name']:22} "
+                  f"índice {r['indice']:5.1f} · {r['nota'] or r['motivo']}")

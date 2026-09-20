@@ -146,6 +146,14 @@
       "scores": {"coding": 55, "writing": 60, "reasoning": 55, "long_context": 60, "vision": 40, "speed": 90, "price": 99},
       "price_note": "Lo más barato del mercado (~$0.02/M)",
       "tags": ["economico", "local"]
+    },
+    {
+      "id": "jev",
+      "name": "Jev",
+      "provider": "TypeSafe AI",
+      "scores": {"coding": 55, "writing": 35, "reasoning": 60, "long_context": 40, "vision": 40, "speed": 97, "price": 99},
+      "price_note": "US$0.042/M · decisiones tipadas, no texto libre (~200x más rápido)",
+      "tags": ["especialista", "economico"]
     }
   ]
 }

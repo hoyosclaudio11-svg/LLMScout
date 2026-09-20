@@ -351,16 +351,19 @@ class Panel:
         self.usos_modelo = self.db.usos_por_modelo()
 
         locales_on = bool(self.locales)
-        for i, (indice, motivo, m) in enumerate(recs, start=1):
-            es_loc = locales_on and benchmarks.es_local(m["name"], self.locales)
-            self._tarjeta(i, m, indice_ui=indice, motivo=motivo,
-                          color=color, local=es_loc, cat=cat, pos=i)
+        for i, item in enumerate(recs, start=1):
+            es_loc = locales_on and benchmarks.es_local(
+                item["modelo"]["name"], self.locales)
+            self._tarjeta(i, item, color=color, local=es_loc, cat=cat)
 
         self._pintar_pie()
-        self.db.impresiones(cat, [(m["id"], i)
-                                  for i, (_, _, m) in enumerate(recs, 1)])
+        self.db.impresiones(cat, [(item["modelo"]["id"], i)
+                                  for i, item in enumerate(recs, 1)])
 
-    def _tarjeta(self, rank, m, indice_ui, motivo, color, local, cat, pos):
+    def _tarjeta(self, rank, item, color, local, cat):
+        m = item["modelo"]
+        rol_color = {"Mejor": color, "Equilibrado": "#e8a04c",
+                     "Económico": "#59c98f"}.get(item["rol"], color)
         card = tk.Frame(self.frame_cards, bg=CARD, highlightbackground=LINE,
                         highlightthickness=1)
         card.pack(fill="x", pady=4)
@@ -368,6 +371,8 @@ class Panel:
         head.pack(fill="x", padx=10, pady=(8, 0))
         tk.Label(head, text=f"{rank}", bg=CARD, fg=MEDALLA.get(rank, MUT),
                  font=("Segoe UI", 12, "bold"), width=2).pack(side="left")
+        tk.Label(head, text=item["rol"], bg=CARD, fg=rol_color,
+                 font=("Segoe UI", 8, "bold")).pack(side="left", padx=(2, 0))
         nombre = m["name"] + ("  ● local" if local else "")
         tk.Label(head, text=nombre, bg=CARD, fg=TXT,
                  font=("Segoe UI", 10, "bold")).pack(side="left", padx=(4, 0))
@@ -382,10 +387,10 @@ class Panel:
         cuerpo.pack(fill="x", padx=10)
         usos_m = self.usos_modelo.get(m["id"], 0)
         extra = f" · tus usos: {usos_m}" if usos_m else ""
-        tk.Label(cuerpo, text=f"{motivo} · índice {indice_ui:.0f}{extra}",
+        tk.Label(cuerpo, text=f"{item['motivo']} · índice {item['indice']:.0f}{extra}",
                  bg=CARD, fg=color, font=("Segoe UI", 8), anchor="w",
                  wraplength=320, justify="left").pack(fill="x")
-        tk.Label(cuerpo, text=m.get("price_note", ""), bg=CARD, fg=MUT,
+        tk.Label(cuerpo, text=item["nota"], bg=CARD, fg=MUT,
                  font=("Segoe UI", 8), anchor="w",
                  wraplength=320, justify="left").pack(fill="x", pady=(1, 4))
 
@@ -467,9 +472,11 @@ def cli_top(categoria):
         return
     ms, f = benchmarks.cargar()
     print(f"fuente: {f}")
-    for ind, mot, m in benchmarks.recomendar(categoria, ms):
+    for r in benchmarks.recomendar(categoria, ms):
+        m = r["modelo"]
         url = benchmarks.url_web(m["name"])
-        print(f"  {m['name']:24} índice {ind:5.1f} · {mot} · {url or '-'}")
+        print(f"  [{r['rol']:11}] {m['name']:22} índice {r['indice']:5.1f} · "
+              f"{r['nota'] or r['motivo']} · {url or '-'}")
 
 
 def cli_stats():
