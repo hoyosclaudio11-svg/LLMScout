@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "snapshot_date": "2026-09-19",
+  "source": "Snapshot local, aproximado (base: Artificial Analysis Intelligence Index v4.3 y SWE-bench de Vellum/Iternal, normalizado 0-100 por categoría)",
+  "models": [
+    {
+      "id": "claude-fable-5.1",
+      "name": "Claude Fable 5.1",
+      "provider": "Anthropic",
+      "scores": {"coding": 95, "writing": 93, "reasoning": 92, "long_context": 85, "vision": 85, "speed": 45, "price": 30},
+      "price_note": "Caro: pensado para trabajo de máxima calidad",
+      "tags": ["frontier"]
+    },
+    {
+      "id": "claude-mythos-5",
+      "name": "Claude Mythos 5",
+      "provider": "Anthropic",
+      "scores": {"coding": 96, "writing": 90, "reasoning": 90, "long_context": 85, "vision": 82, "speed": 45, "price": 30},
+      "price_note": "SWE-bench ~95.5% · gama alta",
+      "tags": ["frontier", "codigo"]
+    },
+    {
+      "id": "gpt-6-astra",
+      "name": "GPT-6 Astra",
+      "provider": "OpenAI",
+      "scores": {"coding": 94, "writing": 92, "reasoning": 96, "long_context": 88, "vision": 90, "speed": 50, "price": 25},
+      "price_note": "Gama alta, multimodal fuerte",
+      "tags": ["frontier"]
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "name": "GPT-5.6 Sol",
+      "provider": "OpenAI",
+      "scores": {"coding": 96, "writing": 86, "reasoning": 89, "long_context": 82, "vision": 80, "speed": 55, "price": 35},
+      "price_note": "SWE-bench 96.2% · el mejor codificador del ranking",
+      "tags": ["frontier", "codigo"]
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "name": "GPT-5.6 Luna",
+      "provider": "OpenAI",
+      "scores": {"coding": 93, "writing": 82, "reasoning": 85, "long_context": 75, "vision": 78, "speed": 70, "price": 60},
+      "price_note": "Más rápido y barato que Sol, casi al nivel en código",
+      "tags": ["codigo", "equilibrado"]
+    },
+    {
+      "id": "grok-4.6",
+      "name": "Grok 4.6",
+      "provider": "xAI",
+      "scores": {"coding": 88, "writing": 87, "reasoning": 89, "long_context": 80, "vision": 82, "speed": 60, "price": 50},
+      "price_note": "Razonamiento alto a precio medio",
+      "tags": ["frontier"]
+    },
+    {
+      "id": "gemini-3.1-pro",
+      "name": "Gemini 3.1 Pro",
+      "provider": "Google",
+      "scores": {"coding": 89, "writing": 87, "reasoning": 90, "long_context": 96, "vision": 93, "speed": 65, "price": 60},
+      "price_note": "El mejor con documentos largos e imágenes",
+      "tags": ["frontier", "vision", "largo"]
+    },
+    {
+      "id": "gemini-2.5-flash-lite",
+      "name": "Gemini 2.5 Flash-Lite",
+      "provider": "Google",
+      "scores": {"coding": 68, "writing": 72, "reasoning": 66, "long_context": 75, "vision": 70, "speed": 92, "price": 96},
+      "price_note": "Ultrarrápido (~400 tok/s) y baratísimo",
+      "tags": ["economico", "rapido"]
+    },
+    {
+      "id": "glm-5.3",
+      "name": "GLM-5.3",
+      "provider": "Z AI",
+      "scores": {"coding": 90, "writing": 84, "reasoning": 86, "long_context": 80, "vision": 72, "speed": 55, "price": 85},
+      "price_note": "El mejor open weights · barato para su nivel",
+      "tags": ["open", "codigo"]
+    },
+    {
+      "id": "glm-5.3-flash",
+      "name": "GLM-5.3 Flash",
+      "provider": "Z AI",
+      "scores": {"coding": 82, "writing": 78, "reasoning": 78, "long_context": 72, "vision": 60, "speed": 85, "price": 97},
+      "price_note": "Open, rápido y muy barato",
+      "tags": ["open", "economico"]
+    },
+    {
+      "id": "kimi-k3",
+      "name": "Kimi K3",
+      "provider": "Moonshot",
+      "scores": {"coding": 87, "writing": 86, "reasoning": 87, "long_context": 88, "vision": 70, "speed": 55, "price": 85},
+      "price_note": "Open fuerte en tareas largas y agénticas",
+      "tags": ["open"]
+    },
+    {
+      "id": "kimi-k2",
+      "name": "Kimi K2",
+      "provider": "Moonshot",
+      "scores": {"coding": 80, "writing": 82, "reasoning": 79, "long_context": 82, "vision": 55, "speed": 70, "price": 92},
+      "price_note": "Barato y confiable para volumen",
+      "tags": ["open", "economico"]
+    },
+    {
+      "id": "deepseek-v4",
+      "name": "DeepSeek V4",
+      "provider": "DeepSeek",
+      "scores": {"coding": 86, "writing": 82, "reasoning": 88, "long_context": 78, "vision": 55, "speed": 60, "price": 92},
+      "price_note": "Muy barato, razonamiento sólido",
+      "tags": ["open", "economico"]
+    },
+    {
+      "id": "qwen-3.5-max",
+      "name": "Qwen 3.5 Max",
+      "provider": "Alibaba",
+      "scores": {"coding": 85, "writing": 83, "reasoning": 84, "long_context": 82, "vision": 80, "speed": 60, "price": 85},
+      "price_note": "Multimodal abierto equilibrado",
+      "tags": ["open"]
+    },
+    {
+      "id": "mistral-large-3",
+      "name": "Mistral Large 3",
+      "provider": "Mistral",
+      "scores": {"coding": 78, "writing": 82, "reasoning": 78, "long_context": 75, "vision": 70, "speed": 72, "price": 88},
+      "price_note": "Europea, buen precio/escritura",
+      "tags": ["open"]
+    },
+    {
+      "id": "devstral-2",
+      "name": "Devstral 2",
+      "provider": "Mistral",
+      "scores": {"coding": 82, "writing": 65, "reasoning": 70, "long_context": 70, "vision": 50, "speed": 80, "price": 97},
+      "price_note": "Especialista en código casi gratis",
+      "tags": ["open", "codigo", "economico"]
+    },
+    {
+      "id": "llama-4-scout",
+      "name": "Llama 4 Scout",
+      "provider": "Meta",
+      "scores": {"coding": 70, "writing": 74, "reasoning": 68, "long_context": 95, "vision": 60, "speed": 75, "price": 98},
+      "price_note": "Contexto gigante (hasta 10M tokens)",
+      "tags": ["open", "largo"]
+    },
+    {
+      "id": "granite-4.2-3b",
+      "name": "Granite 4.2 3B",
+      "provider": "IBM",
+      "scores": {"coding": 55, "writing": 60, "reasoning": 55, "long_context": 60, "vision": 40, "speed": 90, "price": 99},
+      "price_note": "Lo más barato del mercado (~$0.02/M)",
+      "tags": ["economico", "local"]
+    }
+  ]
+}
