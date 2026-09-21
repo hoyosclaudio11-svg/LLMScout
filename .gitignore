@@ -1,5 +1,3 @@
-__pycache__/
-*.pyc
 # datos locales de telemetría y caché: nada de esto viaja al repo
 data/scout.db
 data/scout.db-*
@@ -7,3 +5,4 @@ data/scout.log
 data/ui.json
 data/overrides.json
 data/cache_*.json
+data/noticias.json

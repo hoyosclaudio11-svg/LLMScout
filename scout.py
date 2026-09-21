@@ -29,9 +29,10 @@ import detector  # noqa: E402
 from detector import tarea_activa, ETIQUETA, CATEGORIAS, usuario_activo  # noqa: E402
 import benchmarks  # noqa: E402
 import gateway  # noqa: E402
+import noticias  # noqa: E402
 from storage import DB  # noqa: E402
 
-__version__ = "1.0"
+__version__ = "1.1"
 
 LOG = DATA_DIR / "scout.log"
 DB_PATH = DATA_DIR / "scout.db"
@@ -53,6 +54,13 @@ ACCENT = {"coding": "#4da3ff", "writing": "#e8a04c", "data": "#59c98f",
           "research": "#b48cf2", "media": "#f2708f", "chat": "#5ad1cd",
           "general": "#8b95a7"}
 MEDALLA = {1: "#f5c451", 2: "#c7ccd6", 3: "#cd8f5a"}
+
+# noticias de IA: aparecen de vez en cuando, no todo el tiempo
+NOTI_PRIMERA = 3 * 60    # primera aparición: a los 3 min de arrancar
+NOTI_INTERVALO = 12 * 60 # cada cuánto vuelve a aparecer
+NOTI_DURACION = 150      # cuánto tiempo queda visible
+NOTI_CICLO = 45          # rotación de titular mientras está visible
+ALPHA_DEF = 0.88
 
 
 def _log(msg):
@@ -112,17 +120,29 @@ class Panel:
         self.locales_ts = 0
         self.solo_local = tk.BooleanVar(value=False)
         self.topmost = tk.BooleanVar(value=bool(ui.get("topmost", True)))
+        self.noticias_on = tk.BooleanVar(value=bool(ui.get("noticias", True)))
+        self.alpha = float(ui.get("alpha", ALPHA_DEF))
+        if not 0.3 <= self.alpha <= 1.0:
+            self.alpha = ALPHA_DEF
+        self.alpha_var = tk.DoubleVar(value=self.alpha)
         self.usos_modelo = {}
         self._cat = None
         self._app_actual = ""
         self._proceso = ""
         self._ticks = 0
         self._gw_listo = False
+        # estado de la franja de noticias
+        self._noti_items, self._noti_idx = [], 0
+        self._noti_visible = False
+        self._noti_hover = False
+        self._noti_t_mostrar = time.time() + NOTI_PRIMERA
+        self._noti_t_ocultar = 0
 
         root.title("LLM Scout")
         root.configure(bg=BG)
         root.overrideredirect(True)
         root.attributes("-topmost", self.topmost.get())
+        root.attributes("-alpha", self.alpha)
 
         self._armar_ui()
         self._posicionar(ui)
@@ -130,6 +150,7 @@ class Panel:
         self._menu()
 
         threading.Thread(target=self._recargar, daemon=True).start()
+        threading.Thread(target=self._noticias_loop, daemon=True).start()
         root.after(POLL_MS, self._tick)
         root.protocol("WM_DELETE_WINDOW", self._salir)
         _log(f"inicio v{__version__}")
@@ -174,7 +195,33 @@ class Panel:
                                   bg=BG, fg=MUT, font=("Segoe UI", 9))
         self.lbl_carga.pack(pady=20)
 
+        # --- franja de noticias de IA (aparece de vez en cuando) ---
+        self.frame_noti = tk.Frame(self.root, bg=BG)
+        tk.Frame(self.frame_noti, height=1, bg=LINE).pack(fill="x", pady=(0, 5))
+        fila_noti = tk.Frame(self.frame_noti, bg=BG)
+        fila_noti.pack(fill="x")
+        tk.Label(fila_noti, text="📰", bg=BG, fg=MUT,
+                 font=("Segoe UI", 8)).pack(side="left")
+        self.lbl_noti = tk.Label(fila_noti, text="", bg=BG, fg=TXT,
+                                 font=("Segoe UI", 8), anchor="w",
+                                 wraplength=290, justify="left", cursor="hand2")
+        self.lbl_noti.pack(side="left", padx=(4, 0))
+        self.lbl_noti.bind("<Button-1>", self._noti_abrir)
+        btn_noti_x = tk.Label(fila_noti, text="✕", bg=BG, fg=MUT,
+                              cursor="hand2", font=("Segoe UI", 8))
+        btn_noti_x.pack(side="right")
+        btn_noti_x.bind("<Button-1>", lambda e: self._noti_ocultar())
+        self.lbl_noti_meta = tk.Label(self.frame_noti, text="", bg=BG, fg=MUT,
+                                      font=("Segoe UI", 7), anchor="w")
+        self.lbl_noti_meta.pack(fill="x")
+        self.lbl_noti_meta.bind("<Button-1>", self._noti_abrir)
+        for w in (self.frame_noti, fila_noti):
+            w.bind("<Enter>", lambda e: setattr(self, "_noti_hover", True))
+            w.bind("<Leave>", lambda e: setattr(self, "_noti_hover", False))
+        self._pie = None  # se asigna abajo para poder ordenar el pack
+
         pie = tk.Frame(self.root, bg=BG)
+        self._pie = pie
         pie.pack(fill="x", padx=12, pady=(0, 8))
         self.lbl_filtro = tk.Checkbutton(
             pie, text="Solo FreeLLMAPI (3001)", variable=self.solo_local,
@@ -216,11 +263,33 @@ class Panel:
         m.add_command(label="Recargar benchmarks", command=self._recargar_thread)
         m.add_checkbutton(label="Siempre arriba", variable=self.topmost,
                           command=self._toggle_top)
-        m.add_command(label="Abrir carpeta de datos", command=self._abrir_datos)
         m.add_separator()
+        m.add_checkbutton(label="Noticias de IA de vez en cuando",
+                          variable=self.noticias_on,
+                          command=self._toggle_noticias)
+        m.add_command(label="Ver noticias ahora", command=self._noticias_ahora)
+        m_t = tk.Menu(m, tearoff=0, bg=CARD, fg=TXT, bd=0)
+        for pct in (100, 90, 80, 70, 60):
+            m_t.add_radiobutton(label=f"{pct} %", value=pct / 100,
+                                variable=self.alpha_var, command=self._set_alpha)
+        m.add_cascade(label="Transparencia", menu=m_t)
+        m.add_separator()
+        m.add_command(label="Abrir carpeta de datos", command=self._abrir_datos)
         m.add_command(label="Salir", command=self._salir)
         for w in (self.root, self.lbl_tarea):
             w.bind("<Button-3>", lambda e: m.tk_popup(e.x_root, e.y_root))
+
+    def _set_alpha(self):
+        self.alpha = round(float(self.alpha_var.get()), 2)
+        self.root.attributes("-alpha", self.alpha)
+        self._guardar_pos()
+
+    def _toggle_noticias(self):
+        if self.noticias_on.get():
+            self._noti_t_mostrar = time.time() + 30  # reactivada: en 30 s
+        elif self._noti_visible:
+            self._noti_ocultar()
+        self._guardar_pos()
 
     def _toggle_top(self):
         self.root.attributes("-topmost", self.topmost.get())
@@ -238,7 +307,9 @@ class Panel:
         try:
             d = _cargar_json(UI_JSON, {})
             d.update({"x": self.root.winfo_x(), "y": self.root.winfo_y(),
-                      "topmost": bool(self.topmost.get())})
+                      "topmost": bool(self.topmost.get()),
+                      "alpha": self.alpha,
+                      "noticias": bool(self.noticias_on.get())})
             DATA_DIR.mkdir(parents=True, exist_ok=True)
             UI_JSON.write_text(json.dumps(d), "utf-8")
         except Exception:
@@ -278,11 +349,94 @@ class Panel:
     def _toggle_filtro(self):
         self._recargar_thread()
 
+    # ---- noticias de IA (franja intermitente) ----
+    def _noticias_loop(self):
+        """Trae el feed en background y lo refresca cada 30 min."""
+        while True:
+            if self.noticias_on.get():
+                items, estado = noticias.cargar()
+                if items or estado != "vacio":
+                    self._noti_items = items
+                elif self._noti_items:
+                    pass  # sin red: quedarnos con lo último que haya
+            time.sleep(30 * 60)
+
+    def _noticias_ahora(self):
+        def traer():
+            items, _ = noticias.cargar(forzar=True)
+            self._noti_items = items or self._noti_items
+            if self._noti_items:
+                self.root.after(0, self._noti_mostrar)
+        threading.Thread(target=traer, daemon=True).start()
+
+    def _noti_tick(self):
+        """Programado desde _tick: decide si la franja entra o sale."""
+        if not self.noticias_on.get():
+            return
+        ahora = time.time()
+        if self._noti_visible:
+            if ahora > self._noti_t_ocultar and not self._noti_hover:
+                self._noti_ocultar()
+        elif self._noti_items and ahora >= self._noti_t_mostrar:
+            self._noti_mostrar()
+
+    def _noti_mostrar(self):
+        if not self._noti_items or self._noti_visible:
+            return
+        self._noti_visible = True
+        self._noti_idx %= max(1, len(self._noti_items))
+        self._noti_pintar()
+        self._noti_t_ocultar = time.time() + NOTI_DURACION
+        self.frame_noti.pack(fill="x", padx=12, before=self._pie)
+        self._ajustar_geo()
+        self.root.after(NOTI_CICLO * 1000, self._noti_rotar)
+
+    def _noti_ocultar(self):
+        self._noti_visible = False
+        self._noti_hover = False
+        self.frame_noti.pack_forget()
+        self._ajustar_geo()
+        self._noti_t_mostrar = time.time() + NOTI_INTERVALO
+
+    def _noti_rotar(self):
+        if not self._noti_visible:
+            return
+        self._noti_idx = (self._noti_idx + 1) % len(self._noti_items)
+        self._noti_pintar()
+        self.root.after(NOTI_CICLO * 1000, self._noti_rotar)
+
+    def _noti_pintar(self):
+        if not self._noti_items:
+            return
+        it = self._noti_items[self._noti_idx]
+        self.lbl_noti.config(text=it["titulo"])
+        cuando = noticias.hace(it["ts"])
+        self.lbl_noti_meta.config(
+            text=f"{it['fuente']}" + (f" · {cuando}" if cuando else ""))
+
+    def _noti_abrir(self, _e=None):
+        if self._noti_items:
+            webbrowser.open(self._noti_items[self._noti_idx]["link"])
+
+    def _ajustar_geo(self):
+        """Recalcula el alto real del panel y lo baja si queda fuera de pantalla."""
+        try:
+            self.root.update_idletasks()
+            h = min(self.root.winfo_reqheight(),
+                    self.root.winfo_screenheight() - 20)
+            x, y = self.root.winfo_x(), self.root.winfo_y()
+            if y + h > self.root.winfo_screenheight() - 10:
+                y = max(0, self.root.winfo_screenheight() - 10 - h)
+            self.root.geometry(f"370x{h}+{x}+{y}")
+        except Exception:
+            pass
+
     # ---- loop de detección
     def _tick(self):
         self._ticks += 1
         if self._ticks % CICLOS_GATEWAY == 0:
             threading.Thread(target=self._chequeo_gateway, daemon=True).start()
+        self._noti_tick()
         try:
             # higiene de la métrica: sin input reciente o PC bloqueada -> no contar
             if usuario_activo(max_idle_seg=300):
@@ -359,6 +513,7 @@ class Panel:
         self._pintar_pie()
         self.db.impresiones(cat, [(item["modelo"]["id"], i)
                                   for i, item in enumerate(recs, 1)])
+        self._ajustar_geo()
 
     def _tarjeta(self, rank, item, color, local, cat):
         m = item["modelo"]

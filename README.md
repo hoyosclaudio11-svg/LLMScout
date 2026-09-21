@@ -1,9 +1,10 @@
-# LLM Scout v1
+# LLM Scout v1.1
 
 Agente de escritorio: detecta qué tarea estás haciendo mirando la ventana en
 foco y sugiere los 3 mejores LLMs para esa tarea, según benchmarks. Mide
 **adopción real** cruzando las sugerencias con los pedidos que registran tus
-gateways locales (ModelMatch Desktop / FreeLLMAPI).
+gateways locales (ModelMatch Desktop / FreeLLMAPI). Y de yapa: noticias de IA
+que aparecen de vez en cuando y panel con transparencia ajustable.
 
 ## Cómo correr
 
@@ -40,8 +41,8 @@ Sin dependencias: Python estándar + tkinter + SQLite.
    (adopción manual), **"Abrir ↗"** (chat web del modelo: claude.ai,
    chatgpt.com, chat.z.ai, kimi.com…) y **Copiar**. Checkbox "Solo
    FreeLLMAPI" filtra a los modelos del gateway 3001 y marca "● local".
-   Recuerda posición y "siempre arriba" (`data/ui.json`); una sola instancia
-   a la vez.
+   Recuerda posición, "siempre arriba" y **transparencia** (menú clic derecho →
+   Transparencia, 100–60 %, default 88 %); una sola instancia a la vez.
 
 4. **Adopción real** (`gateway.py`): cada ~60 s lee los pedidos nuevos de
    **ModelMatch Desktop** (`Escritorio\ModelMatch\datos\modelmatch.db`, la
@@ -51,6 +52,14 @@ Sin dependencias: Python estándar + tkinter + SQLite.
    Esa es la métrica de éxito de v1; el botón manual es el fallback cuando
    el pedido sale por otro lado.
 
+5. **Noticias de IA** (`noticias.py`): una franja fina que aparece **de vez
+   en cuando**, no siempre — cada ~12 min entra con un titular, rota cada
+   45 s durante ~2,5 min y se esconde sola (✕ la cierra antes; el mouse
+   encima pospone). Fuentes RSS/Atom sin dependencias: Google News ES,
+   TechCrunch y The Verge (máx. 3 por fuente, filtro de promos). Cache de
+   30 min, refresco en background. Menú: "Ver noticias ahora" y checkbox
+   para apagar. Clic en el titular → abre la nota.
+
 ## Archivos
 
 | Archivo | Qué es |
@@ -58,9 +67,28 @@ Sin dependencias: Python estándar + tkinter + SQLite.
 | `data/scout.db` | impresiones, usos manuales, adopciones reales |
 | `data/benchmarks.json` | snapshot de calidad (fecha y fuente adentro) |
 | `data/cache_precios.json` | precios OpenRouter (24 h) |
+| `data/noticias.json` | cache del feed de noticias (30 min) |
 | `data/overrides.json` | correcciones del detector |
-| `data/ui.json` | posición del panel, siempre-arriba, ruta de la DB de ModelMatch |
+| `data/ui.json` | posición, siempre-arriba, transparencia, ruta de la DB de ModelMatch |
 | `data/scout.log` | errores (nada muere mudo) |
+| `medir_recursos.py` | mide RAM/CPU del panel en ejecución |
+
+## Consumo de recursos (medido)
+
+21/09/2026, panel v1.1 en ejecución (noticias + transparencia activas),
+medido con `python medir_recursos.py` sobre el proceso `pythonw`:
+
+```
+RAM working set :   63.4 MB  (0.4 % de 16 GB)
+RAM privada     :   42.2 MB  (costo real)
+CPU acumulada   :    1.8 s en ~20 min de uso (~0.2 % promedio)
+```
+
+Letra chica: el working set incluye DLLs compartidas de Python/Tkinter que
+otros procesos también mapean; la memoria privada (42 MB) es el costo real de
+tener el panel abierto — menos que una pestaña de Chrome. La franja de
+noticias no se nota: son 12 títulos en memoria y un temporizador, sin
+imágenes ni webviews.
 
 ## Datos del snapshot
 
